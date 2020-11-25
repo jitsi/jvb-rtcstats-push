@@ -3,6 +3,7 @@ const { v4: uuidv4 } = require('uuid');
 const { diff } = require('deep-object-diff')
 const yargs = require('yargs/yargs')
 const { hideBin } = require('yargs/helpers')
+const WebSocketClient = require('websocket').client;
 
 class App {
     constructor(jvbBaseUrl, rtcStatsServerUrl) {
@@ -10,6 +11,7 @@ class App {
         this.rtcStatsServerUrl = rtcStatsServerUrl;
         console.log(`Querying JVB REST API at ${this.jvbUrl}`);
         console.log(`Sending stats data to RTC stats server at ${this.rtcStatsServerUrl}`);
+
         // Map conference ID to state about that conference
         // Conference state contains, at least:
         // dumpId: (String) the dump ID for this conference
@@ -18,12 +20,22 @@ class App {
         this.conferenceStates = {};
     }
 
-    start() {
+    async start() {
+        try {
+            this.ws = await setupWebsocket(this.rtcStatsServerUrl);
+        } catch (err) {
+            console.error(`Error connecting to RTC stats server: ${err.toString()}`);
+            return;
+        }
         this.fetchTask = setInterval(async () => {
             console.log("Fetching data");
             const json = await fetchJson(this.jvbUrl);
             this.processJvbJson(json);
         }, 5000);
+    }
+
+    stop() {
+        clearInterval(this.fetchTask);
     }
 
     processJvbJson(jvbJson) {
@@ -49,12 +61,12 @@ class App {
                 endpoints: []
             }
             this.conferenceStates[newConfId] = confState;
-            sendIdentityMessage(confState);
+            this.sendData(createIdentityMessage(confState));
         });
         removedConfIds.forEach(removedConfId => {
             const confState = this.conferenceStates[removedConfId];
             delete this.conferenceStates[removedConfId];
-            sendCloseMessage(confState["dumpId"])
+            this.sendData(createCloseMsg(confState["dumpId"]))
         });
     }
 
@@ -62,7 +74,7 @@ class App {
         this.checkForAddedOrRemovedEndpoints(confId, confData["endpoints"]);
         const previousData = this.conferenceStates[confId]["previous_debug_data"] || {};
         const statDiff = diff(previousData, confData);
-        sendStatEntryMessage(this.conferenceStates[confId].dumpId, statDiff);
+        this.sendData(createStatEntryMessage(this.conferenceStates[confId].dumpId, statDiff));
         this.conferenceStates[confId]["previous_debug_data"] = confData;
     }
 
@@ -74,8 +86,12 @@ class App {
         const newEndpoints = epStatsIds.filter(epStatsId => knownConfEps.indexOf(epStatsId) === -1);
         if (newEndpoints.length > 0) {
             confState["endpoints"].push(...newEndpoints);
-            sendIdentityMessage(confState);
+            this.sendData(createIdentityMessage(confState));
         }
+    }
+
+    sendData(msgObj) {
+        this.ws.send(JSON.stringify(msgObj));
     }
 }
 
@@ -121,31 +137,38 @@ async function fetchJson(url) {
     }
 }
 
-function sendIdentityMessage(/*websocket client,*/ state) {
+function createIdentityMessage(state) {
     // This is a bit awkward: we keep the dumpId in the conference state,
     // but we need to set it as an explicit field of the message.
     const {dumpId, ...metadata} = state;
-    const msg = {
+    return {
         type: "identity",
         dumpId,
         data: JSON.stringify(metadata)
     }
-    console.log("created identity message: ", JSON.stringify(msg));
 }
 
-function sendCloseMessage(/* websocket client,*/dumpId) {
-    const msg = {
+function createCloseMsg(dumpId) {
+    return {
         type: "close",
         dumpId
     }
-    console.log("created close message: ", JSON.stringify(msg));
 }
 
-function sendStatEntryMessage(dumpId, data) {
-    const msg = {
+function createStatEntryMessage(dumpId, data) {
+    return {
         type: "stats-entry",
         dumpId,
         data: JSON.stringify(data)
     }
-    // console.log("Created stats entry message: ", JSON.stringify(msg))
 }
+
+function setupWebsocket(url) {
+    return new Promise(((resolve, reject) => {
+        const client = new WebSocketClient();
+        client.on('connectFailed', reject);
+        client.on('connect', resolve);
+        client.connect(url, "rtcstats");
+    }))
+}
+
