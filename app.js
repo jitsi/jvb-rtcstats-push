@@ -1,5 +1,6 @@
 const fetch = require("node-fetch")
 const { v4: uuidv4 } = require('uuid');
+const { diff } = require('deep-object-diff')
 
 // TODO: take as argument
 const jvbUrl = "http://127.0.0.1:4443/debug?full=true";
@@ -52,8 +53,10 @@ class App {
 
     processConference(confId, confData) {
         this.checkForAddedOrRemovedEndpoints(confId, confData["endpoints"]);
-        // TODO: diff, update previous data
-        sendStatEntryMessage(this.conferenceStates[confId].dumpId, confData);
+        const previousData = this.conferenceStates[confId]["previous_debug_data"] || {};
+        const statDiff = diff(previousData, confData);
+        sendStatEntryMessage(this.conferenceStates[confId].dumpId, statDiff);
+        this.conferenceStates[confId]["previous_debug_data"] = confData;
     }
 
     checkForAddedOrRemovedEndpoints(confId, currentConfEndpoints) {
@@ -118,6 +121,6 @@ function sendStatEntryMessage(dumpId, data) {
         dumpId,
         data: JSON.stringify(data)
     }
-    console.log("Created stats entry message: ", JSON.stringify(msg))
+    // console.log("Created stats entry message: ", JSON.stringify(msg))
 }
 
