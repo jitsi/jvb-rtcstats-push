@@ -95,8 +95,6 @@ class App {
     }
 }
 
-console.log("argv: ", process.argv);
-
 const params = yargs(hideBin(process.argv))
     .options({
         "jvb-address": {
@@ -167,6 +165,7 @@ function setupWebsocket(url) {
     return new Promise(((resolve, reject) => {
         const client = new WebSocketClient();
         client.on('connectFailed', reject);
+        // Handle issues with the connection after it's connected
         client.on('connect', resolve);
         client.connect(url, "rtcstats");
     }))
