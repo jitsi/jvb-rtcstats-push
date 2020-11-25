@@ -1,12 +1,15 @@
 const fetch = require("node-fetch")
 const { v4: uuidv4 } = require('uuid');
 const { diff } = require('deep-object-diff')
-
-// TODO: take as argument
-const jvbUrl = "http://127.0.0.1:4443/debug?full=true";
+const yargs = require('yargs/yargs')
+const { hideBin } = require('yargs/helpers')
 
 class App {
-    constructor() {
+    constructor(jvbBaseUrl, rtcStatsServerUrl) {
+        this.jvbUrl = `${jvbBaseUrl}/debug?full=true`;
+        this.rtcStatsServerUrl = rtcStatsServerUrl;
+        console.log(`Querying JVB REST API at ${this.jvbUrl}`);
+        console.log(`Sending stats data to RTC stats server at ${this.rtcStatsServerUrl}`);
         // Map conference ID to state about that conference
         // Conference state contains, at least:
         // dumpId: (String) the dump ID for this conference
@@ -18,7 +21,7 @@ class App {
     start() {
         this.fetchTask = setInterval(async () => {
             console.log("Fetching data");
-            const json = await fetchData();
+            const json = await fetchJson(this.jvbUrl);
             this.processJvbJson(json);
         }, 5000);
     }
@@ -76,7 +79,26 @@ class App {
     }
 }
 
-const app = new App();
+console.log("argv: ", process.argv);
+
+const params = yargs(hideBin(process.argv))
+    .options({
+        "jvb-address": {
+            alias: "j",
+            describe: "The address of the JVB whose REST API will be queried ('http://127.0.0.1:8080')",
+            demandOption: true
+        },
+        "rtcstats-server": {
+            alias: "r",
+            describe: "The address of the RTC stats server websocket ('ws://127.0.0.1:3000')",
+            demandOption: true
+        }
+
+    })
+    .help()
+    .argv
+
+const app = new App(params.jvbAddress, params.rtcstatsServer);
 
 app.start();
 
@@ -89,9 +111,9 @@ function getConferenceIds(jvbJson) {
     return Object.keys(jvbJson.conferences);
 }
 
-async function fetchData() {
+async function fetchJson(url) {
     try {
-        const response = await fetch(jvbUrl)
+        const response = await fetch(url)
         return await response.json();
     } catch (e) {
         console.log("Error retrieving data: ", e);
@@ -127,4 +149,3 @@ function sendStatEntryMessage(dumpId, data) {
     }
     // console.log("Created stats entry message: ", JSON.stringify(msg))
 }
-
