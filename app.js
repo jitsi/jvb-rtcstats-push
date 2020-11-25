@@ -25,7 +25,11 @@ class App {
 
     processJvbJson(jvbJson) {
         this.checkForAddedOrRemovedConferences(jvbJson);
+        const timestamp = jvbJson["time"]
         Object.keys(jvbJson["conferences"]).forEach(confId => {
+            const confData = jvbJson["conferences"][confId];
+            // The timestamp is at the top level, inject it into the conference data here
+            confData["timestamp"] = timestamp;
             this.processConference(confId, jvbJson["conferences"][confId]);
         });
     }
