@@ -137,8 +137,10 @@ async function fetchJson(url) {
 
 function createIdentityMessage(state) {
     // This is a bit awkward: we keep the dumpId in the conference state,
-    // but we need to set it as an explicit field of the message.
-    const {dumpId, ...metadata} = state;
+    // but we need to set it as an explicit field of the message.  Also,
+    // we need to explicit parse out previous_debug_data so that we can
+    // not include it in the message
+    const {dumpId, previous_debug_data, ...metadata} = state;
     return {
         type: "identity",
         dumpId,
