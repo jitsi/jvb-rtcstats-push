@@ -4,6 +4,7 @@ const { diff } = require('deep-object-diff')
 const yargs = require('yargs/yargs')
 const { hideBin } = require('yargs/helpers')
 const WebSocketClient = require('websocket').client;
+const os = require("os");
 
 class App {
     constructor(jvbBaseUrl, rtcStatsServerUrl) {
@@ -57,7 +58,9 @@ class App {
             const clientId = uuidv4();
             const confState = {
                 clientId,
-                // TODO: use a set?
+                confID: extractConferenceName(jvbJson, newConfId),
+                meetingUniqueId: newConfId,
+                applicationName: 'JVB',
                 endpoints: []
             }
             this.conferenceStates[newConfId] = confState;
@@ -135,6 +138,10 @@ async function fetchJson(url) {
     }
 }
 
+function extractConferenceName(jvbJson, confId) {
+    return jvbJson.conferences[confId].name.split('@')[0];
+}
+
 function createIdentityMessage(state) {
     // This is a bit awkward: we keep the clientId in the conference state,
     // but we need to set it as an explicit field of the message.  Also,
@@ -144,7 +151,7 @@ function createIdentityMessage(state) {
     return {
         type: "identity",
         clientId,
-        data: JSON.stringify(metadata)
+        data: metadata
     }
 }
 
@@ -169,7 +176,9 @@ function setupWebsocket(url) {
         client.on('connectFailed', reject);
         // Handle issues with the connection after it's connected
         client.on('connect', resolve);
-        client.connect(url, "rtcstats");
+        client.connect(url,
+            '3.0_JVB',
+            os.hostname(),
+            {'User-Agent': `Node ${process.version}`});
     }))
 }
-
