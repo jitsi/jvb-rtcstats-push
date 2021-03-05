@@ -4,6 +4,7 @@ const { diff } = require('deep-object-diff')
 const yargs = require('yargs/yargs')
 const { hideBin } = require('yargs/helpers')
 const WebSocketClient = require('websocket').client;
+const os = require("os");
 
 class App {
     constructor(jvbBaseUrl, rtcStatsServerUrl) {
@@ -14,7 +15,7 @@ class App {
 
         // Map conference ID to state about that conference
         // Conference state contains, at least:
-        // dumpId: (String) the dump ID for this conference
+        // statsSessionId: (String) the dump ID for this conference
         // endpoints: (Array) endpoint stat IDs for all endpoints *who have ever* been in this conference
         // previous_debug_data: (Object) the previous debug data from the last request (used for diffing)
         this.conferenceStates = {};
@@ -54,10 +55,12 @@ class App {
         const newConfIds = confIds.filter(id => !(id in this.conferenceStates));
         const removedConfIds = Object.keys(this.conferenceStates).filter(id => confIds.indexOf(id) === -1)
         newConfIds.forEach(newConfId => {
-            const dumpId = uuidv4();
+            const statsSessionId = uuidv4();
             const confState = {
-                dumpId,
-                // TODO: use a set?
+                statsSessionId,
+                confName: extractConferenceName(jvbJson, newConfId),
+                meetingUniqueId: newConfId,
+                applicationName: 'JVB',
                 endpoints: []
             }
             this.conferenceStates[newConfId] = confState;
@@ -66,7 +69,7 @@ class App {
         removedConfIds.forEach(removedConfId => {
             const confState = this.conferenceStates[removedConfId];
             delete this.conferenceStates[removedConfId];
-            this.sendData(createCloseMsg(confState["dumpId"]))
+            this.sendData(createCloseMsg(confState["statsSessionId"]))
         });
     }
 
@@ -74,7 +77,7 @@ class App {
         this.checkForAddedOrRemovedEndpoints(confId, confData["endpoints"]);
         const previousData = this.conferenceStates[confId]["previous_debug_data"] || {};
         const statDiff = diff(previousData, confData);
-        this.sendData(createStatEntryMessage(this.conferenceStates[confId].dumpId, statDiff));
+        this.sendData(createStatEntryMessage(this.conferenceStates[confId].statsSessionId, statDiff));
         this.conferenceStates[confId]["previous_debug_data"] = confData;
     }
 
@@ -135,30 +138,34 @@ async function fetchJson(url) {
     }
 }
 
+function extractConferenceName(jvbJson, confId) {
+    return jvbJson.conferences[confId].name.split('@')[0];
+}
+
 function createIdentityMessage(state) {
-    // This is a bit awkward: we keep the dumpId in the conference state,
+    // This is a bit awkward: we keep the statsSessionId in the conference state,
     // but we need to set it as an explicit field of the message.  Also,
     // we need to explicit parse out previous_debug_data so that we can
     // not include it in the message
-    const {dumpId, previous_debug_data, ...metadata} = state;
+    const {statsSessionId, previous_debug_data, ...metadata} = state;
     return {
         type: "identity",
-        dumpId,
-        data: JSON.stringify(metadata)
+        statsSessionId,
+        data: metadata
     }
 }
 
-function createCloseMsg(dumpId) {
+function createCloseMsg(statsSessionId) {
     return {
         type: "close",
-        dumpId
+        statsSessionId
     }
 }
 
-function createStatEntryMessage(dumpId, data) {
+function createStatEntryMessage(statsSessionId, data) {
     return {
         type: "stats-entry",
-        dumpId,
+        statsSessionId,
         data: JSON.stringify(data)
     }
 }
@@ -169,7 +176,9 @@ function setupWebsocket(url) {
         client.on('connectFailed', reject);
         // Handle issues with the connection after it's connected
         client.on('connect', resolve);
-        client.connect(url, "rtcstats");
+        client.connect(url,
+            '3.0_JVB',
+            os.hostname(),
+            {'User-Agent': `Node ${process.version}`});
     }))
 }
-
