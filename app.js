@@ -99,6 +99,7 @@ class App {
 }
 
 const params = yargs(hideBin(process.argv))
+    .env()
     .options({
         "jvb-address": {
             alias: "j",
@@ -114,6 +115,8 @@ const params = yargs(hideBin(process.argv))
     })
     .help()
     .argv
+
+console.log(`Got jvb address ${params.jvbAddress} and rtc stats server ${params.rtcstatsServer}`);
 
 const app = new App(params.jvbAddress, params.rtcstatsServer);
 
