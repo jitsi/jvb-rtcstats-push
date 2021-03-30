@@ -175,7 +175,10 @@ function createStatEntryMessage(statsSessionId, data) {
 
 function setupWebsocket(url) {
     return new Promise(((resolve, reject) => {
-        const client = new WebSocketClient();
+        const client = new WebSocketClient({
+            keepalive: true,
+            keepaliveInterval: 20000,
+        });
         client.on('connectFailed', reject);
         // Handle issues with the connection after it's connected
         client.on('connect', resolve);
