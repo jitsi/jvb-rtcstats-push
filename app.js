@@ -21,13 +21,48 @@ class App {
         this.conferenceStates = {};
     }
 
-    async start() {
-        try {
-            this.ws = await setupWebsocket(this.rtcStatsServerUrl);
-        } catch (err) {
-            console.error(`Error connecting to RTC stats server: ${err.toString()}`);
-            return;
+    start() {
+        // Create the websocket client
+        this.wsClient = new WebSocketClient({
+            keepalive: true,
+            keepaliveInterval: 20000,
+        });
+        // Enclose the websocket connect logic so it can be re-used easily in the reconnect logic below.
+        const wsConnectionFunction = () => {
+            console.log("Connecting websocket");
+            this.wsClient.connect(
+                this.rtcStatsServerUrl,
+                '3.0_JVB',
+                os.hostname(),
+                {'User-Agent': `Node ${process.version}`}
+            );
         }
+
+        // Install the event handlers on the websocket client
+        this.wsClient.on('connectFailed', error => {
+            console.log("Websocket connection failed: ", error);
+            console.log("Will try to reconnect in 5 seconds");
+            setTimeout(wsConnectionFunction, 5000);
+        });
+
+        this.wsClient.on('connect', connection => {
+            // Assign the new connection to a member so it can be used to send data
+            this.ws = connection;
+            console.log("Websocket connected");
+
+            // Install the event handlers on the connection object
+            connection.on('error', error => {
+                console.log("Websocket error: ", error);
+            });
+
+            connection.on('close', () => {
+                console.log("Websocket closed, will try to reconnect in 5 seconds");
+                setTimeout(wsConnectionFunction, 5000);
+            });
+        });
+
+        // Do the initial connection
+        wsConnectionFunction();
         this.fetchTask = setInterval(async () => {
             console.log("Fetching data");
             const json = await fetchJson(this.jvbUrl);
@@ -173,18 +208,3 @@ function createStatEntryMessage(statsSessionId, data) {
     }
 }
 
-function setupWebsocket(url) {
-    return new Promise(((resolve, reject) => {
-        const client = new WebSocketClient({
-            keepalive: true,
-            keepaliveInterval: 20000,
-        });
-        client.on('connectFailed', reject);
-        // Handle issues with the connection after it's connected
-        client.on('connect', resolve);
-        client.connect(url,
-            '3.0_JVB',
-            os.hostname(),
-            {'User-Agent': `Node ${process.version}`});
-    }))
-}
