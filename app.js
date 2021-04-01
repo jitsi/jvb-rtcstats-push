@@ -22,6 +22,19 @@ class App {
     }
 
     start() {
+        this.setupWebsocket();
+        this.fetchTask = setInterval(async () => {
+            console.log("Fetching data");
+            const json = await fetchJson(this.jvbUrl);
+            this.processJvbJson(json);
+        }, 5000);
+    }
+
+    stop() {
+        clearInterval(this.fetchTask);
+    }
+
+    setupWebsocket() {
         // Create the websocket client
         this.wsClient = new WebSocketClient({
             keepalive: true,
@@ -63,15 +76,6 @@ class App {
 
         // Do the initial connection
         wsConnectionFunction();
-        this.fetchTask = setInterval(async () => {
-            console.log("Fetching data");
-            const json = await fetchJson(this.jvbUrl);
-            this.processJvbJson(json);
-        }, 5000);
-    }
-
-    stop() {
-        clearInterval(this.fetchTask);
     }
 
     processJvbJson(jvbJson) {
