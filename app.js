@@ -98,7 +98,7 @@ class App {
             const confState = {
                 statsSessionId,
                 confName: extractConferenceName(jvbJson, newConfId),
-                meetingUniqueId: newConfId,
+                meetingUniqueId: extractUniqueMeetingId(jvbJson, newConfId) || newConfId,
                 applicationName: 'JVB',
                 endpoints: []
             }
@@ -182,6 +182,10 @@ async function fetchJson(url) {
 
 function extractConferenceName(jvbJson, confId) {
     return jvbJson.conferences[confId].name.split('@')[0];
+}
+
+function extractUniqueMeetingId(jvbJson, confId) {
+    return jvbJson.conferences[confId].meeting_id;
 }
 
 function createIdentityMessage(state) {
