@@ -1,5 +1,5 @@
 {
-  "name": "jvb-rtcstats-push",
+  "name": "@jitsi/jvb-rtcstats-push",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
