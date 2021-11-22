@@ -172,7 +172,8 @@ function getConferenceIds(jvbJson) {
     // rtcstatsEnabled flag set in order to maintain backwards compatibility with bridges that don't support this
     // new flag.
     return Object.keys(jvbJson.conferences)
-        .filter(confId => jvbJson.conferences[confId] === undefined || jvbJson.conferences[confId].rtcstatsEnabled));
+        .filter(confId => jvbJson.conferences[confId].rtcstatsEnabled === undefined
+            || jvbJson.conferences[confId].rtcstatsEnabled));
 }
 
 async function fetchJson(url) {
