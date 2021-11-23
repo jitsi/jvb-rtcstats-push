@@ -168,7 +168,12 @@ app.start();
  * @param jvbJson
  */
 function getConferenceIds(jvbJson) {
-    return Object.keys(jvbJson.conferences);
+    // only report conferences that have rtcstats enabled. Note that we include conferences that don't have the
+    // rtcstatsEnabled flag set in order to maintain backwards compatibility with bridges that don't support this
+    // new flag.
+    return Object.keys(jvbJson.conferences)
+        .filter(confId => jvbJson.conferences[confId].rtcstatsEnabled === undefined
+            || jvbJson.conferences[confId].rtcstatsEnabled));
 }
 
 async function fetchJson(url) {
