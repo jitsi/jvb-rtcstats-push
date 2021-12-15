@@ -173,7 +173,7 @@ function getConferenceIds(jvbJson) {
     // new flag.
     return Object.keys(jvbJson.conferences)
         .filter(confId => jvbJson.conferences[confId].rtcstatsEnabled === undefined
-            || jvbJson.conferences[confId].rtcstatsEnabled));
+            || jvbJson.conferences[confId].rtcstatsEnabled);
 }
 
 async function fetchJson(url) {
