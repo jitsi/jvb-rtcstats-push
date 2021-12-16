@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node app.js"
+    "start": "node app.js",
+    "lint": "standard app.js",
+    "lint-fix": "standard --fix app.js"
   },
   "keywords": [],
   "author": "",
@@ -13,6 +15,7 @@
   "dependencies": {
     "deep-object-diff": "^1.1.0",
     "node-fetch": "^2.6.1",
+    "standard": "^16.0.4",
     "uuid": "^8.3.1",
     "websocket": "^1.0.32",
     "yargs": "^16.1.1"
