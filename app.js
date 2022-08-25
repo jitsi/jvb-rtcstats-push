@@ -171,9 +171,13 @@ function getConferenceIds (jvbJson) {
   // only report conferences that have rtcstats enabled. Note that we include conferences that don't have the
   // rtcstatsEnabled flag set in order to maintain backwards compatibility with bridges that don't support this
   // new flag.
+  // We also filter out conferences that don't have the name set. In practice this just ignores conferences
+  // created with REST to make sure the JVB IP has been initialized.
   return Object.keys(jvbJson.conferences)
-    .filter(confId => jvbJson.conferences[confId].rtcstatsEnabled === undefined ||
-            jvbJson.conferences[confId].rtcstatsEnabled)
+    .filter(confId => {
+      const conf = jvbJson.conferences[confId];
+      return (conf.rtcstatsEnabled == undefined || conf.rtcstatsEnabled) && conf.name
+  })
 }
 
 async function fetchJson (url) {
