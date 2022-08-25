@@ -81,7 +81,7 @@ class App {
   processJvbJson (jvbJson) {
     this.checkForAddedOrRemovedConferences(jvbJson)
     const timestamp = jvbJson.time
-    Object.keys(jvbJson.conferences).forEach(confId => {
+    getConferenceIds(jvbJson).forEach(confId => {
       const confData = jvbJson.conferences[confId]
       // The timestamp is at the top level, inject it into the conference data here
       confData.timestamp = timestamp
@@ -175,9 +175,9 @@ function getConferenceIds (jvbJson) {
   // created with REST to make sure the JVB IP has been initialized.
   return Object.keys(jvbJson.conferences)
     .filter(confId => {
-      const conf = jvbJson.conferences[confId];
-      return (conf.rtcstatsEnabled == undefined || conf.rtcstatsEnabled) && conf.name
-  })
+      const conf = jvbJson.conferences[confId]
+      return (conf.rtcstatsEnabled === undefined || conf.rtcstatsEnabled) && conf.name
+    })
 }
 
 async function fetchJson (url) {
