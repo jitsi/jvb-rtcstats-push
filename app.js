@@ -5,6 +5,7 @@ const yargs = require('yargs/yargs')
 const { hideBin } = require('yargs/helpers')
 const WebSocketClient = require('websocket').client
 const os = require('os')
+require('log-timestamp')
 
 class App {
   constructor (jvbBaseUrl, rtcStatsServerUrl) {
