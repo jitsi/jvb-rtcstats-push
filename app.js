@@ -1,4 +1,5 @@
 const fetch = require('node-fetch')
+const JvbLogTail = require('./JvbLogTail.js')
 const { v4: uuidv4 } = require('uuid')
 const { diff } = require('deep-object-diff')
 const yargs = require('yargs/yargs')
@@ -8,9 +9,10 @@ const os = require('os')
 require('log-timestamp')
 
 class App {
-  constructor (jvbBaseUrl, rtcStatsServerUrl) {
+  constructor (jvbBaseUrl, rtcStatsServerUrl, jvbLogFilePath) {
     this.jvbUrl = `${jvbBaseUrl}/debug?full=true`
     this.rtcStatsServerUrl = rtcStatsServerUrl
+    this.jvbLogFilePath = jvbLogFilePath
     console.log(`Querying JVB REST API at ${this.jvbUrl}`)
     console.log(`Sending stats data to RTC stats server at ${this.rtcStatsServerUrl}`)
 
@@ -24,6 +26,10 @@ class App {
 
   start () {
     this.setupWebsocket()
+    if (this.jvbLogFilePath) {
+      console.log(`Reading JVB logs from ${this.jvbLogFilePath}.`)
+      this.tail = new JvbLogTail(this.jvbLogFilePath)
+    }
     this.fetchTask = setInterval(async () => {
       console.log('Fetching data')
       const json = await fetchJson(this.jvbUrl)
@@ -118,8 +124,16 @@ class App {
     this.checkForAddedOrRemovedEndpoints(confId, confData.endpoints)
     const previousData = this.conferenceStates[confId].previousDebugData || {}
     const statDiff = diff(previousData, confData)
-    this.sendData(createStatEntryMessage(this.conferenceStates[confId].statsSessionId, statDiff))
+    const statsSessionId = this.conferenceStates[confId].statsSessionId
+    this.sendData(createStatEntryMessage(statsSessionId, statDiff))
     this.conferenceStates[confId].previousDebugData = confData
+
+    if (this.tail) {
+      const logs = this.tail.getLogs(this.conferenceStates[confId].meetingUniqueId)
+      if (logs && logs.length) {
+        this.sendData(createStatEntryLogMessage(statsSessionId, logs))
+      }
+    }
   }
 
   checkForAddedOrRemovedEndpoints (confId, currentConfEndpoints) {
@@ -151,15 +165,19 @@ const params = yargs(hideBin(process.argv))
       alias: 'r',
       describe: "The address of the RTC stats server websocket ('ws://127.0.0.1:3000')",
       demandOption: true
+    },
+    'jvb-log-file': {
+      alias: 'l',
+      describe: 'The path to the JVB log file to tail.',
+      demandOption: false
     }
-
   })
   .help()
   .argv
 
-console.log(`Got jvb address ${params.jvbAddress} and rtc stats server ${params.rtcstatsServer}`)
+console.log(`Using jvb address ${params.jvbAddress}, jvb log file ${params.jvbLogFile}, and rtcstats server ${params.rtcstatsServer}.`)
 
-const app = new App(params.jvbAddress, params.rtcstatsServer)
+const app = new App(params.jvbAddress, params.rtcstatsServer, params.jvbLogFile)
 
 app.start()
 
@@ -216,6 +234,24 @@ function createCloseMsg (statsSessionId) {
   return {
     type: 'close',
     statsSessionId
+  }
+}
+
+/** Create a stats-entry message that includes logs. */
+function createStatEntryLogMessage (statsSessionId, logLines) {
+  const data = [
+    'logs',
+    null,
+    logLines.map(line => {
+      return { text: line, count: 1 }
+    }),
+    Date.now()
+  ]
+
+  return {
+    type: 'stats-entry',
+    statsSessionId,
+    data: JSON.stringify(data)
   }
 }
 
