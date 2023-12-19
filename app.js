@@ -31,7 +31,6 @@ class App {
       this.tail = new JvbLogTail(this.jvbLogFilePath)
     }
     this.fetchTask = setInterval(async () => {
-      console.log('Fetching data')
       const json = await fetchJson(this.jvbUrl)
       this.processJvbJson(json)
     }, 5000)
