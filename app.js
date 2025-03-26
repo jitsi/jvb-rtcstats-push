@@ -49,7 +49,7 @@ class App {
     // Enclose the websocket connect logic so it can be re-used easily in the reconnect logic below.
     const wsConnectionFunction = () => {
       console.log('Connecting websocket')
-      const displayName = process.env.JVB_MUC_NICKNAME ? process.env.JVB_MUC_NICKNAME : os.hostname()
+      const displayName = process.env.JVB_MUC_NICKNAME ?? os.hostname()
       this.wsClient.connect(
         this.rtcStatsServerUrl,
         '3.0_JVB',
