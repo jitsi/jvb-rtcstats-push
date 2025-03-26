@@ -49,10 +49,11 @@ class App {
     // Enclose the websocket connect logic so it can be re-used easily in the reconnect logic below.
     const wsConnectionFunction = () => {
       console.log('Connecting websocket')
+      const displayName = process.env.JVB_MUC_NICKNAME ? process.env.JVB_MUC_NICKNAME : os.hostname()
       this.wsClient.connect(
         this.rtcStatsServerUrl,
         '3.0_JVB',
-        os.hostname(),
+        displayName,
         { 'User-Agent': `Node ${process.version}` }
       )
     }
@@ -96,6 +97,7 @@ class App {
   }
 
   checkForAddedOrRemovedConferences (jvbJson) {
+    const displayName = process.env.JVB_MUC_NICKNAME ? process.env.JVB_MUC_NICKNAME : os.hostname()
     const confIds = getConferenceIds(jvbJson)
     const newConfIds = confIds.filter(id => !(id in this.conferenceStates))
     const removedConfIds = Object.keys(this.conferenceStates).filter(id => confIds.indexOf(id) === -1)
@@ -104,7 +106,7 @@ class App {
       const confState = {
         statsSessionId,
         confName: extractConferenceName(jvbJson, newConfId),
-        displayName: os.hostname(),
+        displayName: displayName,
         meetingUniqueId: extractUniqueMeetingId(jvbJson, newConfId) || newConfId,
         applicationName: 'JVB',
         endpoints: []
