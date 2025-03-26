@@ -97,7 +97,7 @@ class App {
   }
 
   checkForAddedOrRemovedConferences (jvbJson) {
-    const displayName = process.env.JVB_MUC_NICKNAME ? process.env.JVB_MUC_NICKNAME : os.hostname()
+    const displayName = process.env.JVB_MUC_NICKNAME ?? os.hostname()
     const confIds = getConferenceIds(jvbJson)
     const newConfIds = confIds.filter(id => !(id in this.conferenceStates))
     const removedConfIds = Object.keys(this.conferenceStates).filter(id => confIds.indexOf(id) === -1)
