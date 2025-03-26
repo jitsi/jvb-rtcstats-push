@@ -106,7 +106,7 @@ class App {
       const confState = {
         statsSessionId,
         confName: extractConferenceName(jvbJson, newConfId),
-        displayName: displayName,
+        displayName,
         meetingUniqueId: extractUniqueMeetingId(jvbJson, newConfId) || newConfId,
         applicationName: 'JVB',
         endpoints: []
