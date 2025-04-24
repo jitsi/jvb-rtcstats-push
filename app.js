@@ -9,8 +9,8 @@ const os = require('os')
 require('log-timestamp')
 
 class App {
-  constructor (jvbBaseUrl, rtcStatsServerUrl, jvbLogFilePath) {
-    this.jvbUrl = `${jvbBaseUrl}/debug?full=true`
+  constructor (jvbUrl, rtcStatsServerUrl, jvbLogFilePath) {
+    this.jvbUrl = jvbUrl
     this.rtcStatsServerUrl = rtcStatsServerUrl
     this.jvbLogFilePath = jvbLogFilePath
     console.log(`Querying JVB REST API at ${this.jvbUrl}`)
@@ -171,6 +171,10 @@ const params = yargs(hideBin(process.argv))
       alias: 'l',
       describe: 'The path to the JVB log file to tail.',
       demandOption: false
+    },
+    'jvb-path': {
+      describe: 'The path of the HTTP endpoint to query.',
+      default: 'debug?full=true'
     }
   })
   .help()
@@ -178,7 +182,7 @@ const params = yargs(hideBin(process.argv))
 
 console.log(`Using jvb address ${params.jvbAddress}, jvb log file ${params.jvbLogFile}, and rtcstats server ${params.rtcstatsServer}.`)
 
-const app = new App(params.jvbAddress, params.rtcstatsServer, params.jvbLogFile)
+const app = new App(`${params.jvbAddress}/${params.jvbPath}`, params.rtcstatsServer, params.jvbLogFile)
 
 app.start()
 
