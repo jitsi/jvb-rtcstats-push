@@ -174,7 +174,7 @@ const params = yargs(hideBin(process.argv))
     },
     'jvb-path': {
       describe: 'The path of the HTTP endpoint to query.',
-      default: 'debug?full=true'
+      default: 'stats'
     }
   })
   .help()
